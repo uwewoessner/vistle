@@ -14,6 +14,8 @@
 #include <vistle/core/messages.h>
 #include <VistlePluginUtil/VistleRenderObject.h>
 #include "VistleGeometryGenerator.h"
+#include "PluginRenderObject.h"
+#include "CoverCreator.h"
 
 #include "export.h"
 
@@ -28,19 +30,6 @@ class Access;
 } // namespace opencover
 
 namespace vistle {} // namespace vistle
-
-class PluginRenderObject: public vistle::RenderObject {
-public:
-    PluginRenderObject(int senderId, const std::string &senderPort, vistle::Object::const_ptr container,
-                       vistle::Object::const_ptr geometry, vistle::Object::const_ptr normals,
-                       vistle::Object::const_ptr texture)
-    : vistle::RenderObject(senderId, senderPort, container, geometry, normals, texture)
-    {}
-
-    ~PluginRenderObject() override;
-
-    std::shared_ptr<VistleRenderObject> coverRenderObject;
-};
 
 class V_COVEREXPORT COVER: public vistle::Renderer {
     friend class CoverConfigBridge;
@@ -83,6 +72,8 @@ public:
 
     bool executeAll() const;
 
+    opencover::coVRPlugin *plugin() const { return m_plugin; }
+
     typedef std::map<std::string, std::string> FileAttachmentMap;
     FileAttachmentMap m_fileAttachmentMap;
     typedef std::map<double, std::vector<std::string>> DelayedFileUnloadMap;
@@ -103,34 +94,6 @@ public:
     size_t m_status = 0;
 
 protected:
-    struct Variant {
-        std::string variant;
-        std::string name;
-        osg::ref_ptr<osg::Group> root;
-        osg::ref_ptr<osg::Group> constant;
-        osg::ref_ptr<osg::Sequence> animated;
-        VariantRenderObject ro;
-
-        Variant(const std::string &basename, const std::string &variant = std::string());
-    };
-
-    struct Creator {
-        Creator(int id, const std::string &name, osg::ref_ptr<osg::Group> parent);
-        const Variant &
-        getVariant(const std::string &variantName,
-                   vistle::RenderObject::InitialVariantVisibility vis = vistle::RenderObject::DontChange) const;
-        osg::ref_ptr<osg::Group> root(const std::string &variant = std::string()) const;
-        osg::ref_ptr<osg::Group> constant(const std::string &variant = std::string()) const;
-        osg::ref_ptr<osg::Sequence> animated(const std::string &variant = std::string()) const;
-        bool removeVariant(const std::string &variant = std::string());
-        bool empty() const;
-
-        int id;
-        std::string name;
-        Variant baseVariant;
-        mutable std::map<std::string, Variant> variants;
-    };
-
     typedef std::map<int, Creator> CreatorMap;
     CreatorMap creatorMap;
 

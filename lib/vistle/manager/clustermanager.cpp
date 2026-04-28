@@ -443,6 +443,7 @@ bool ClusterManager::dispatch(bool &received)
         // process messages that have been delayed because of a previous barrier
         auto &incoming = mod.incomingMessages;
         while (!incoming.empty()) {
+            received = true;
             if (!Communicator::the().handleMessage(incoming.front().buf, incoming.front().payload))
                 done = true;
             incoming.pop_front();
@@ -456,6 +457,7 @@ bool ClusterManager::dispatch(bool &received)
         std::swap(m_incomingMessages, incoming);
     }
     while (!incoming.empty()) {
+        received = true;
         int sender = incoming.front().buf.senderId();
         bool barrierReached = m_reachedSet.find(sender) != m_reachedSet.end();
         if (!barrierReached) {
@@ -1267,7 +1269,8 @@ bool ClusterManager::handlePriv(const message::Execute &exec)
         break;
     }
     case message::Execute::Prepare: {
-        CERR << "sending prepare to " << exec.getModule() << ", checking for execution" << std::endl;
+        CERR << "sending prepare to " << exec.getModule() << ", checking for execution: prepared=" << mod.prepared
+             << ", reduced=" << mod.reduced << std::endl;
         assert(!mod.prepared);
         assert(mod.reduced);
         mod.prepared = true;
@@ -1277,7 +1280,8 @@ bool ClusterManager::handlePriv(const message::Execute &exec)
         break;
     }
     case message::Execute::Reduce: {
-        CERR << "sending reduce to " << exec.getModule() << std::endl;
+        CERR << "sending reduce to " << exec.getModule() << ": prepared=" << mod.prepared << ", reduced=" << mod.reduced
+             << std::endl;
         assert(mod.prepared);
         assert(!mod.reduced);
         mod.prepared = false;
@@ -1291,7 +1295,8 @@ bool ClusterManager::handlePriv(const message::Execute &exec)
             mod.prepared = false;
             mod.reduced = true;
         } else if (Communicator::the().getRank() == 0) {
-            CERR << "non-broadcast Execute: " << exec << std::endl;
+            CERR << "non-broadcast Execute: " << exec << ": prepared=" << mod.prepared << ", reduced=" << mod.reduced
+                 << std::endl;
             if (mod.ranksStarted > 0) {
                 mod.delay(exec);
             } else {
